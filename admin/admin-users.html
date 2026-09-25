@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Users — InternLog Admin</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%232563eb'/><text x='16' y='22' font-family='system-ui,sans-serif' font-weight='800' font-size='16' fill='white' text-anchor='middle'>IL</text></svg>">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/script.js" defer></script>
+</head>
+<body>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar" aria-label="Admin navigation">
+      <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">IL</span><span>InternLog Admin</span></a>
+      <nav>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="users.html">Users</a>
+        <a href="applications.html">Applications</a>
+        <a href="profile.html">Profile</a>
+      </nav>
+      <div class="side-foot"><nav><a href="../index.html" data-logout>Logout</a></nav></div>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">☰</button>
+        <h1>Users & Companies</h1>
+        <div class="spacer"></div>
+        <div class="user-chip">
+          <span class="avatar" data-avatar>A</span>
+          <span><strong data-user-name>Admin</strong><br><span class="muted" data-user-email></span></span>
+        </div>
+      </header>
+      <main class="content">
+        <div class="toolbar" role="search">
+          <input type="text" id="userSearch" class="search-input" placeholder="Search by name, email, or college…" aria-label="Search users">
+          <select id="userStatusFilter" aria-label="Filter by account status">
+            <option value="All">All statuses</option>
+            <option>Active</option>
+            <option>Disabled</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table aria-label="Registered users">
+            <thead><tr><th>User ID</th><th>Name</th><th>Email</th><th>College</th><th>Course</th><th>Registered</th><th>Applications</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="usersBody"></tbody>
+          </table>
+        </div>
+
+        <section class="card" id="companies" style="margin-top:22px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap">
+            <div><h2 style="margin:0 0 6px">Company Accounts</h2><p class="muted" style="margin:0">Monitor company registrations and prototype account status.</p></div>
+            <a class="btn btn-secondary btn-sm" href="../company/register.html">Open company registration</a>
+          </div>
+          <div class="table-wrap" style="margin-top:14px">
+            <table aria-label="Registered companies">
+              <thead><tr><th>Company</th><th>Email</th><th>Location</th><th>Industry</th><th>Registered</th><th>Internships</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="companiesBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" id="internships" style="margin-top:22px">
+          <h2 style="margin:0 0 6px">Internship Moderation</h2>
+          <p class="muted">Review company-posted opportunities and change their prototype publishing status.</p>
+          <div class="table-wrap" style="margin-top:14px">
+            <table aria-label="Company internship opportunities">
+              <thead><tr><th>Opportunity</th><th>Company</th><th>Location</th><th>Deadline</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="companyJobsBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+<script>
+(function(){
+  function read(k,f){try{var v=JSON.parse(localStorage.getItem(k));return v==null?f:v;}catch(e){return f;}}
+  function write(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  function esc(x){return String(x==null?"":x).replace(/[&<>\"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});}
+  function fmt(v){if(!v)return"—";var p=String(v).split("-");return p.length===3?new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):esc(v);}
+  function badge(st){var cls=st==="Active"||st==="Published"?"badge-selected":st==="Pending Review"||st==="Pending"?"badge-shortlisted":"badge-disabled";return '<span class="badge '+cls+'">'+esc(st)+'</span>'; }
+  function renderCompanies(){var body=document.getElementById("companiesBody");if(!body)return;var companies=read("internlog_companies",[]),jobs=read("internlog_internships",[]);body.innerHTML=companies.length?companies.map(function(c){var count=jobs.filter(function(j){return String(j.companyId)===String(c.id);}).length;var st=c.status||"Active";return '<tr><td><strong>'+esc(c.name)+'</strong></td><td>'+esc(c.email)+'</td><td>'+esc(c.location)+'</td><td>'+esc(c.industry||"—")+'</td><td>'+fmt(c.registeredDate)+'</td><td>'+count+'</td><td>'+badge(c.verified?st:"Pending")+'</td><td><div class="actions"><button class="link-btn" data-toggle-company="'+c.id+'">'+(c.status==="Suspended"?"Restore":"Suspend")+'</button><button class="link-btn danger" data-delete-company="'+c.id+'">Delete</button></div></td></tr>';}).join(""):'<tr><td colspan="8" class="muted">No company accounts yet.</td></tr>';}
+  function renderJobs(){var body=document.getElementById("companyJobsBody");if(!body)return;var jobs=read("internlog_internships",[]);body.innerHTML=jobs.length?jobs.slice().sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt));}).map(function(j){return '<tr><td><strong>'+esc(j.title)+'</strong></td><td>'+esc(j.company)+'</td><td>'+esc(j.location||"—")+'</td><td>'+fmt(j.deadline)+'</td><td>'+badge(j.status)+'</td><td><div class="actions">'+(j.status!=="Published"?'<button class="link-btn" data-publish-job="'+j.id+'">Publish</button>':'<button class="link-btn" data-unpublish-job="'+j.id+'">Archive</button>')+'</div></td></tr>';}).join(""):'<tr><td colspan="6" class="muted">No company internship opportunities yet.</td></tr>'; }
+  document.addEventListener("DOMContentLoaded",function(){renderCompanies();renderJobs();var cb=document.getElementById("companiesBody"),jb=document.getElementById("companyJobsBody");if(cb)cb.addEventListener("click",function(e){var id=e.target.getAttribute("data-toggle-company")||e.target.getAttribute("data-delete-company");if(!id)return;var companies=read("internlog_companies",[]),i=companies.findIndex(function(c){return String(c.id)===String(id);});if(i<0)return;if(e.target.getAttribute("data-delete-company")){if(!confirm("Delete this company and its internship posts?"))return;var jobs=read("internlog_internships",[]).filter(function(j){return String(j.companyId)!==String(id);});write("internlog_internships",jobs);companies.splice(i,1);write("internlog_companies",companies);}else{companies[i].status=companies[i].status==="Suspended"?"Active":"Suspended";write("internlog_companies",companies);}renderCompanies();renderJobs();});if(jb)jb.addEventListener("click",function(e){var pub=e.target.getAttribute("data-publish-job"),arch=e.target.getAttribute("data-unpublish-job"),id=pub||arch;if(!id)return;var jobs=read("internlog_internships",[]),i=jobs.findIndex(function(j){return String(j.id)===String(id);});if(i<0)return;jobs[i].status=pub?"Published":"Archived";jobs[i].moderatedAt=new Date().toISOString();write("internlog_internships",jobs);renderJobs();});});
+}());
+</script>
+</body>
+</html>
